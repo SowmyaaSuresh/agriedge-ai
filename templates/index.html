@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AgriEdge AI | Field-Deployable Smart Farming Assistant</title>
+  <link rel="stylesheet" href="/static/style.css?v=2">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- TOP STATUS & EDGE GATEWAY BAR -->
+  <header class="top-nav">
+    <div class="nav-brand">
+      <div class="brand-icon">🌱</div>
+      <div class="brand-text">
+        <div class="brand-title">AgriEdge AI <span class="brand-tag">Field Assistant</span></div>
+        <div class="brand-sub">Field-Deployable Smart Farming Assistant • On-Device AI for Climate Resilience</div>
+      </div>
+    </div>
+
+    <div class="nav-controls">
+      <div class="edge-status-pill">
+        <span class="status-dot pulse"></span>
+        <span id="gateway-status-text">100% OFFLINE EDGE MODE</span>
+      </div>
+      <div class="edge-metric-pill" title="Solar & Battery Status">
+        <span class="pill-icon">☀️</span>
+        <span id="solar-metric">94% (18.4W)</span>
+      </div>
+      <div class="edge-metric-pill" title="On-Device Inference Speed">
+        <span class="pill-icon">⚡</span>
+        <span id="npu-latency">36ms INT8</span>
+      </div>
+      <div class="edge-metric-pill" title="LoRa Long Range Farm Mesh">
+        <span class="pill-icon">📡</span>
+        <span>LoRa 868MHz</span>
+      </div>
+
+      <button id="contrast-toggle" class="btn-icon" title="Sunlight High-Contrast Mode for Bright Fields" onclick="toggleHighContrast()">
+        ☀️ Sun Mode
+      </button>
+    </div>
+  </header>
+
+  <!-- QUICK SCENARIO SIMULATOR BAR FOR HACKATHON JUDGES -->
+  <section class="scenario-ribbon">
+    <div class="ribbon-label">
+      <span class="badge-judge">JUDGE DEMO</span>
+      <strong>Simulate Climate &amp; Field Scenarios:</strong>
+    </div>
+    <div class="scenario-buttons">
+      <button class="scenario-btn active" onclick="loadScenario('normal')" id="btn-scen-normal">
+        🟢 Normal Field
+      </button>
+      <button class="scenario-btn" onclick="loadScenario('heatwave')" id="btn-scen-heatwave">
+        🔥 Severe Heatwave (44°C)
+      </button>
+      <button class="scenario-btn" onclick="loadScenario('flood')" id="btn-scen-flood">
+        🌊 Monsoon Flood Alert (85mm)
+      </button>
+      <button class="scenario-btn" onclick="loadScenario('drought')" id="btn-scen-drought">
+        🍂 Acute Drought Stress
+      </button>
+      <button class="scenario-btn" onclick="loadScenario('pest_spike')" id="btn-scen-pest_spike">
+        🐛 Fungal/Pest Vector Surge
+      </button>
+    </div>
+  </section>
+
+  <!-- LIVE SCENARIO ACTION ALERT BANNER (DRAMATIC VISUAL FEEDBACK) -->
+  <div id="scenario-alert-banner" class="scenario-alert-banner banner-normal">
+    <div class="banner-icon" id="banner-icon">🟢</div>
+    <div class="banner-content">
+      <div class="banner-title" id="banner-title">Scenario: Normal Field Conditions</div>
+      <div class="banner-detail" id="banner-detail">
+        Microclimate: <strong id="banner-temp">31.2°C</strong> | Soil Moisture: <strong id="banner-moist">29.5%</strong> | Status: <span id="banner-status-text" class="text-green">All Systems Nominal</span>
+      </div>
+    </div>
+    <div class="banner-action">
+      <button class="banner-btn" id="banner-action-btn" onclick="switchTab('climate')">View Climate Matrix ➔</button>
+    </div>
+  </div>
+
+  <!-- MAIN CONTAINER -->
+  <main class="main-layout">
+    <!-- NAVIGATION TABS -->
+    <nav class="tab-bar">
+      <button class="tab-btn active" onclick="switchTab('vision')" id="tab-btn-vision">
+        🔬 Crop Vision AI Diagnostics
+      </button>
+      <button class="tab-btn" onclick="switchTab('irrigation')" id="tab-btn-irrigation">
+        💧 Smart Irrigation &amp; Water <span class="tab-badge" id="badge-tab-irrig"></span>
+      </button>
+      <button class="tab-btn" onclick="switchTab('climate')" id="tab-btn-climate">
+        ⚠️ Climate Disaster Warnings <span class="tab-badge" id="badge-tab-clim"></span>
+      </button>
+      <button class="tab-btn" onclick="switchTab('voice')" id="tab-btn-voice">
+        📢 Farmer Voice Advisory
+      </button>
+      <button class="tab-btn" onclick="switchTab('analytics')" id="tab-btn-analytics">
+        📊 Field Sensor Analytics
+      </button>
+      <button class="tab-btn" onclick="switchTab('hardware')" id="tab-btn-hardware">
+        ⚙️ Edge Hardware &amp; BOM (&lt; ₹4,500)
+      </button>
+    </nav>
+
+    <!-- ==================== TAB 1: CROP VISION AI DIAGNOSTICS ==================== -->
+    <div class="tab-content active" id="tab-vision">
+      <!-- Live Microclimate Context Strip on Tab 1 -->
+      <div class="field-quick-bar" id="tab1-field-bar">
+        <div class="quick-stat">
+          <span class="quick-label">Ambient Temp</span>
+          <strong id="tab1-ambient-temp">31.2 °C</strong>
+        </div>
+        <div class="quick-stat">
+          <span class="quick-label">Soil Moisture (15cm)</span>
+          <strong id="tab1-soil-moist">29.5 %</strong>
+        </div>
+        <div class="quick-stat">
+          <span class="quick-label">VPD Atmospheric Demand</span>
+          <strong id="tab1-vpd">1.82 kPa (Normal)</strong>
+        </div>
+        <div class="quick-stat highlight" id="tab1-action-box">
+          <span class="quick-label">Current Field Threat Status</span>
+          <strong id="tab1-action-text" class="text-green">Normal (No Active Hazards)</strong>
+        </div>
+      </div>
+      <div class="grid-2col">
+        <!-- Left: Image Input & Sample Selector -->
+        <div class="card">
+          <div class="card-header">
+            <h3>📷 Field Camera &amp; Leaf Sample Inspection</h3>
+            <span class="badge-info">On-Device Edge Vision</span>
+          </div>
+
+          <div class="upload-zone" id="drop-zone" onclick="document.getElementById('file-upload').click()">
+            <input type="file" id="file-upload" accept="image/*" style="display: none;" onchange="handleFileUpload(event)">
+            <div id="preview-container">
+              <div class="upload-icon">📸</div>
+              <p><strong>Click to upload leaf / crop photo</strong> or drag and drop</p>
+              <span class="upload-hint">Supports high-res leaves, pests, or field camera snapshots</span>
+            </div>
+          </div>
+
+          <div class="sample-picker-section">
+            <h4>Or Select Pre-Indexed Field Cases (Instant Edge Inference):</h4>
+            <div class="sample-grid">
+              <button class="sample-chip" onclick="diagnoseSample('sample_tomato_late_blight')">
+                🍅 Tomato Late Blight
+              </button>
+              <button class="sample-chip" onclick="diagnoseSample('sample_wheat_yellow_rust')">
+                🌾 Wheat Yellow Rust
+              </button>
+              <button class="sample-chip" onclick="diagnoseSample('sample_fall_armyworm')">
+                🌽 Maize Fall Armyworm
+              </button>
+              <button class="sample-chip" onclick="diagnoseSample('sample_rice_blast')">
+                🌾 Rice Leaf Blast
+              </button>
+              <button class="sample-chip" onclick="diagnoseSample('sample_cotton_whitefly')">
+                ☁️ Cotton Whitefly
+              </button>
+              <button class="sample-chip" onclick="diagnoseSample('sample_nitrogen_deficiency')">
+                🍂 Nitrogen Deficiency
+              </button>
+              <button class="sample-chip" onclick="diagnoseSample('sample_healthy_crop')">
+                ✨ Healthy Control Crop
+              </button>
+            </div>
+          </div>
+
+          <!-- Edge AI Performance Spec -->
+          <div class="edge-benchmark-box">
+            <div class="benchmark-item">
+              <span class="bench-label">Edge Model</span>
+              <strong id="diag-model-name">MobileNetV4-INT8</strong>
+            </div>
+            <div class="benchmark-item">
+              <span class="bench-label">Model Size</span>
+              <strong>4.2 MB (Flash)</strong>
+            </div>
+            <div class="benchmark-item">
+              <span class="bench-label">Inference Latency</span>
+              <strong class="text-green" id="diag-latency-val">38.4 ms</strong>
+            </div>
+            <div class="benchmark-item">
+              <span class="bench-label">RAM Footprint</span>
+              <strong>32 MB</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Diagnostic Results & Action Plan -->
+        <div class="card result-card" id="diagnosis-result-card">
+          <div class="card-header">
+            <h3>🔬 On-Device AI Diagnostic Report</h3>
+            <div class="card-actions">
+              <button class="btn-voice" onclick="playCurrentAdvisoryAudio()">
+                🔊 Speak Advisory (EN)
+              </button>
+            </div>
+          </div>
+
+          <!-- Diagnosis Overview Header -->
+          <div class="diag-overview">
+            <div class="diag-badge-row">
+              <span class="badge-crop" id="diag-crop-name">Tomato</span>
+              <span class="badge-severity" id="diag-severity">Severe</span>
+              <span class="badge-category" id="diag-category">Fungal Disease</span>
+            </div>
+            <h2 class="diag-condition" id="diag-condition-title">Late Blight</h2>
+            <div class="diag-pathogen">Pathogen: <em id="diag-pathogen-name">Phytophthora infestans</em></div>
+
+            <div class="confidence-bar-wrapper">
+              <div class="confidence-labels">
+                <span>AI Confidence: <strong id="diag-conf-score">97.2%</strong></span>
+                <span>Affected Foliage: <strong id="diag-area-pct">34.5%</strong></span>
+              </div>
+              <div class="progress-track">
+                <div class="progress-fill" id="diag-conf-progress" style="width: 97.2%;"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Farmer Voice Box (English) -->
+          <div class="vernacular-card">
+            <div class="vernacular-header">
+              <span>📢 Actionable Farmer Advisory</span>
+              <button class="btn-copy" onclick="copyAdvisoryText()">📋 Copy</button>
+            </div>
+            <p id="diag-vernacular-text" class="vernacular-body">
+              Late Blight detected on Tomato. Immediate spot-spraying with Copper Oxychloride (2.5g/L) or Metalaxyl recommended. Prune lower infected foliage and halt overhead watering to stop spore germination.
+            </p>
+          </div>
+
+          <!-- Action Plan Tabs: Symptoms, Organic, Chemical, Prevention -->
+          <div class="treatment-sections">
+            <!-- Symptoms -->
+            <div class="treatment-block">
+              <h4>🔍 Identified Symptoms</h4>
+              <ul id="diag-symptoms-list" class="styled-list">
+                <li>Water-soaked irregular dark brown to purplish lesions on foliage</li>
+                <li>White velvety fungal growth on undersides of leaves during high humidity</li>
+              </ul>
+            </div>
+
+            <!-- Organic & Biological Solution -->
+            <div class="treatment-block organic-block">
+              <h4>🌿 Organic &amp; Bio-Control Intervention (Low Cost)</h4>
+              <ul id="diag-organic-list" class="styled-list">
+                <li>Spray 5% Neem Seed Kernel Extract (NSKE) or Copper Oxychloride @ 2.5g/L water.</li>
+                <li>Apply Trichoderma viride or Bacillus subtilis bio-fungicide to soil.</li>
+              </ul>
+            </div>
+
+            <!-- Targeted Chemical (Spot-spraying only) -->
+            <div class="treatment-block chemical-block">
+              <h4>🎯 Targeted Chemical Spot-Spraying (Affected Micro-Plots Only)</h4>
+              <div class="cost-save-note">💡 Micro-targeted spraying saves up to 70% in chemical expenses compared to blanket spraying.</div>
+              <ul id="diag-chemical-list" class="styled-list">
+                <li>Targeted spot-spray of Metalaxyl-M + Mancozeb (Ridomil Gold) @ 2g/L.</li>
+              </ul>
+            </div>
+
+            <!-- Prevention Advisory -->
+            <div class="treatment-block prevention-block">
+              <h4>🛡️ Agronomic Prevention &amp; Spacing</h4>
+              <p id="diag-prevention-text">Avoid overhead sprinkler irrigation. Ensure wide spacing (60x45cm) for air circulation.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== TAB 2: SMART IRRIGATION & WATER MANAGEMENT ==================== -->
+    <div class="tab-content" id="tab-irrigation">
+      <div class="grid-2col">
+        <!-- Sensor Live Gauge Card -->
+        <div class="card">
+          <div class="card-header">
+            <h3>💧 Root Zone Hydraulic Monitoring</h3>
+            <span class="badge-status">Capacitive Sensing</span>
+          </div>
+
+          <!-- Dual Depth Moisture Meters -->
+          <div class="moisture-gauges-grid">
+            <div class="gauge-card">
+              <div class="gauge-depth-tag">15 cm Surface Root Depth</div>
+              <div class="gauge-value" id="val-moist-15">29.5%</div>
+              <div class="gauge-bar-outer">
+                <div class="gauge-bar-inner" id="bar-moist-15" style="width: 29.5%;"></div>
+              </div>
+              <div class="gauge-sub">Available Water: <span id="awc-15">Optimal</span></div>
+            </div>
+
+            <div class="gauge-card">
+              <div class="gauge-depth-tag">30 cm Deep Taproot Depth</div>
+              <div class="gauge-value" id="val-moist-30">33.0%</div>
+              <div class="gauge-bar-outer">
+                <div class="gauge-bar-inner" id="bar-moist-30" style="width: 33.0%;"></div>
+              </div>
+              <div class="gauge-sub">Root Reserve: <span id="awc-30">Hydrated</span></div>
+            </div>
+          </div>
+
+          <!-- Evapotranspiration Metric -->
+          <div class="et0-banner">
+            <div class="et0-item">
+              <span class="et0-label">Reference Evapotranspiration (ET₀)</span>
+              <strong class="et0-val" id="et0-value">4.8 mm/day</strong>
+              <small>Calculated via Penman-Monteith Heuristic</small>
+            </div>
+            <div class="et0-item">
+              <span class="et0-label">Daily Crop Water Demand (ET_c)</span>
+              <strong class="et0-val text-green" id="etc-value">5.04 mm/day</strong>
+              <small>Tomato/Wheat mid-season (Kc=1.05)</small>
+            </div>
+          </div>
+
+          <!-- Water Savings Metric -->
+          <div class="water-savings-box">
+            <div class="savings-icon">🚰</div>
+            <div class="savings-content">
+              <h4>Water Conservation Impact</h4>
+              <div class="savings-number" id="water-saved-display">18,400 Liters</div>
+              <p>Estimated water saved this week through sensor-guided deficit irrigation vs unguided flooding.</p>
+            </div>
+          </div>
+
+          <!-- Interactive Irrigation Form -->
+          <div class="irrigation-form-box">
+            <h4>Customize Field Parameters:</h4>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Soil Type</label>
+                <select id="irrig-soil-type" onchange="triggerRecalculateIrrigation()">
+                  <option value="alluvial">Alluvial Loam</option>
+                  <option value="black_cotton">Black Cotton Soil</option>
+                  <option value="sandy_loam">Sandy Loam</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Rainfall Forecast (Next 24h)</label>
+                <input type="number" id="irrig-rain-forecast" value="0.0" step="0.5" onchange="triggerRecalculateIrrigation()">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Irrigation Action Recommendation -->
+        <div class="card">
+          <div class="card-header">
+            <h3>⚡ Autonomous Irrigation Advisory</h3>
+            <span class="badge-info">Relay / Pump Control</span>
+          </div>
+
+          <div class="decision-box" id="irrig-decision-box">
+            <div class="decision-icon" id="irrig-decision-icon">✅</div>
+            <div class="decision-content">
+              <h2 class="decision-title" id="irrig-decision-title">Adequate Moisture - No Irrigation Needed</h2>
+              <p class="decision-reason" id="irrig-decision-reason">
+                Soil moisture is at optimal 31.6% (68% Available Water Capacity). Crops have sufficient hydraulic buffer for the next 24-36 hours.
+              </p>
+            </div>
+          </div>
+
+          <!-- Pump Specs & Scheduling -->
+          <div class="pump-specs-card">
+            <div class="pump-spec-row">
+              <span class="spec-label">Water Deficit / Requirement:</span>
+              <strong class="spec-val" id="irrig-liters-needed">0 Liters / hectare</strong>
+            </div>
+            <div class="pump-spec-row">
+              <span class="spec-label">Recommended 5HP Pump Run:</span>
+              <strong class="spec-val" id="irrig-pump-hours">0.0 Hours</strong>
+            </div>
+            <div class="pump-spec-row">
+              <span class="spec-label">Optimal Irrigation Window:</span>
+              <strong class="spec-val text-green" id="irrig-optimal-window">Autonomous Monitoring Active</strong>
+            </div>
+          </div>
+
+          <!-- Simulated Field Relay Switch -->
+          <div class="relay-simulator-box">
+            <div class="relay-header">
+              <div>
+                <strong>Field Drip Pump Relay (Zone A)</strong>
+                <div class="relay-sub">Direct Solenoid Valve Control via ESP32 GPIO18</div>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="pump-toggle-switch" onchange="togglePumpRelay(this.checked)">
+                <span class="slider round"></span>
+              </label>
+            </div>
+            <div id="pump-status-note" class="pump-status-note">Status: PUMP OFF (Standby)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== TAB 3: CLIMATE DISASTER EARLY WARNING ==================== -->
+    <div class="tab-content" id="tab-climate">
+      <!-- Resilience Meter Banner -->
+      <div class="resilience-banner">
+        <div class="resilience-score-box">
+          <div class="resilience-circle">
+            <span class="resilience-num" id="resilience-score-val">88</span>
+            <span class="resilience-unit">/100</span>
+          </div>
+          <div class="resilience-text">
+            <h3>Farm Climate Resilience Score</h3>
+            <p>Composite index combining thermal heat stress, flood saturation, drought deficit, and fungal epidemic vectors.</p>
+          </div>
+        </div>
+        <div class="resilience-meta">
+          <div>Vapor Pressure Deficit (VPD): <strong id="val-vpd">1.82 kPa</strong></div>
+          <div>Atmospheric Water Demand: <strong id="val-atmo-demand">Normal</strong></div>
+        </div>
+      </div>
+
+      <!-- 4 Hazard Cards Matrix -->
+      <div class="hazard-grid">
+        <!-- 1. Heatwave Card -->
+        <div class="hazard-card" id="card-heatwave">
+          <div class="hazard-top">
+            <div class="hazard-icon">🔥</div>
+            <span class="hazard-badge badge-low" id="badge-heatwave">LOW RISK</span>
+          </div>
+          <h4 class="hazard-title">Heatwave &amp; Thermal Stress</h4>
+          <div class="hazard-meter-track">
+            <div class="hazard-meter-fill fill-low" id="fill-heatwave" style="width: 20%;"></div>
+          </div>
+          <div class="hazard-score-label">Stress Score: <strong id="score-heatwave">20/100</strong></div>
+          <p class="hazard-desc" id="desc-heatwave">Thermal conditions are within normal physiological bounds for crop photosynthesis.</p>
+          <div class="hazard-counteraction">
+            <strong>Actionable Defense:</strong>
+            <span id="act-heatwave">Maintain standard soil moisture. Run misting micro-sprinklers if temperature exceeds 38°C.</span>
+          </div>
+        </div>
+
+        <!-- 2. Flood / Waterlogging Card -->
+        <div class="hazard-card" id="card-flood">
+          <div class="hazard-top">
+            <div class="hazard-icon">🌊</div>
+            <span class="hazard-badge badge-low" id="badge-flood">LOW RISK</span>
+          </div>
+          <h4 class="hazard-title">Excessive Rain &amp; Flash Flood</h4>
+          <div class="hazard-meter-track">
+            <div class="hazard-meter-fill fill-low" id="fill-flood" style="width: 15%;"></div>
+          </div>
+          <div class="hazard-score-label">Saturation Score: <strong id="score-flood">15/100</strong></div>
+          <p class="hazard-desc" id="desc-flood">Field drainage index is stable. No waterlogging detected.</p>
+          <div class="hazard-counteraction">
+            <strong>Actionable Defense:</strong>
+            <span id="act-flood">Keep perimeter bunds clear of weed blockages for emergency runoff drainage.</span>
+          </div>
+        </div>
+
+        <!-- 3. Drought & Aridity Card -->
+        <div class="hazard-card" id="card-drought">
+          <div class="hazard-top">
+            <div class="hazard-icon">🍂</div>
+            <span class="hazard-badge badge-low" id="badge-drought">LOW RISK</span>
+          </div>
+          <h4 class="hazard-title">Drought &amp; Water Deficit</h4>
+          <div class="hazard-meter-track">
+            <div class="hazard-meter-fill fill-low" id="fill-drought" style="width: 18%;"></div>
+          </div>
+          <div class="hazard-score-label">Deficit Score: <strong id="score-drought">18/100</strong></div>
+          <p class="hazard-desc" id="desc-drought">Adequate soil water storage available in both 15cm and 30cm root profiles.</p>
+          <div class="hazard-counteraction">
+            <strong>Actionable Defense:</strong>
+            <span id="act-drought">Apply organic straw mulch to conserve root moisture if dry spell persists beyond 10 days.</span>
+          </div>
+        </div>
+
+        <!-- 4. Pest & Spore Vector Card -->
+        <div class="hazard-card" id="card-pest_vector">
+          <div class="hazard-top">
+            <div class="hazard-icon">🐛</div>
+            <span class="hazard-badge badge-low" id="badge-pest_vector">LOW RISK</span>
+          </div>
+          <h4 class="hazard-title">Pest &amp; Disease Microclimate</h4>
+          <div class="hazard-meter-track">
+            <div class="hazard-meter-fill fill-low" id="fill-pest_vector" style="width: 22%;"></div>
+          </div>
+          <div class="hazard-score-label">Outbreak Vector: <strong id="score-pest_vector">22/100</strong></div>
+          <p class="hazard-desc" id="desc-pest_vector">Weather vector unfavorable for rapid fungal sporulation or insect multiplication.</p>
+          <div class="hazard-counteraction">
+            <strong>Actionable Defense:</strong>
+            <span id="act-pest_vector">Inspect yellow sticky traps bi-weekly; maintain clean field edges.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== TAB 4: FARMER VOICE ADVISORY & DISPATCHER ==================== -->
+    <div class="tab-content" id="tab-voice">
+      <div class="grid-2col">
+        <!-- Voice Synthesizer Card -->
+        <div class="card">
+          <div class="card-header">
+            <h3>📢 Audio Speech Assistant</h3>
+            <span class="badge-status">Web Speech API</span>
+          </div>
+
+          <div class="audio-player-card">
+            <div class="audio-visualizer">
+              <div class="wave-bar"></div>
+              <div class="wave-bar"></div>
+              <div class="wave-bar"></div>
+              <div class="wave-bar"></div>
+              <div class="wave-bar"></div>
+              <div class="wave-bar"></div>
+              <div class="wave-bar"></div>
+              <div class="wave-bar"></div>
+            </div>
+
+            <div class="audio-controls-row">
+              <button class="btn-play-large" onclick="playCurrentAdvisoryAudio()" id="btn-play-voice">
+                ▶️ Play Voice Advisory (Listen in Audio)
+              </button>
+              <button class="btn-stop" onclick="stopAudio()">⏹️ Stop</button>
+            </div>
+            <div class="audio-note">
+              Designed for farmers in the field: hands-free audio narration of disease diagnosis and emergency countermeasures.
+            </div>
+          </div>
+
+          <div class="vernacular-display-full">
+            <h4>Live Voice Script:</h4>
+            <div class="script-box" id="full-voice-script">
+              Late Blight detected on Tomato. Immediate spot-spraying with Copper Oxychloride (2.5g/L) or Metalaxyl recommended. Prune lower infected foliage and halt overhead watering to stop spore germination.
+            </div>
+          </div>
+        </div>
+
+        <!-- SMS & Mobile Rural Dispatcher -->
+        <div class="card">
+          <div class="card-header">
+            <h3>📱 Field Dispatch Simulator (SMS &amp; WhatsApp)</h3>
+            <span class="badge-info">Multi-Channel Broadcast</span>
+          </div>
+
+          <!-- Phone mockup -->
+          <div class="phone-mockup">
+            <div class="phone-header">
+              <span>💬 AgriEdge Farmer Alert (SMS)</span>
+              <small>SIM-less LoRa Gateway</small>
+            </div>
+            <div class="phone-message" id="phone-sms-text">
+              <strong>[AgriEdge Alert]</strong><br>
+              🌾 Crop: Tomato (Zone B)<br>
+              ⚠️ Risk: Late Blight Detected (Severity: High)<br>
+              🎯 Action: Spray Copper Oxychloride @ 2.5g/L.<br>
+              💧 Irrigation: Halt for 48h (excess soil moisture).
+            </div>
+            <div class="phone-footer">Delivered via LoRa Mesh to Farmer Handset • 0 Cost</div>
+          </div>
+
+          <div class="dispatch-actions">
+            <button class="btn-primary" onclick="copySmsText()">📋 Copy SMS Alert Text</button>
+            <button class="btn-secondary" onclick="simulateWhatsAppShare()">📲 Open in WhatsApp Web</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== TAB 5: FIELD SENSOR ANALYTICS ==================== -->
+    <div class="tab-content" id="tab-analytics">
+      <div class="card">
+        <div class="card-header">
+          <h3>📊 24-Hour Telemetry &amp; Crop Water Depletion Trends</h3>
+          <span class="badge-status">Autonomous Logging</span>
+        </div>
+        <div class="chart-wrapper">
+          <canvas id="telemetry-chart" width="900" height="320"></canvas>
+        </div>
+        <div class="chart-legend">
+          <span class="legend-item"><span class="legend-dot" style="background:#22c55e;"></span> Soil Moisture 15cm (%)</span>
+          <span class="legend-item"><span class="legend-dot" style="background:#3b82f6;"></span> Soil Moisture 30cm (%)</span>
+          <span class="legend-item"><span class="legend-dot" style="background:#ef4444;"></span> Ambient Temperature (°C)</span>
+          <span class="legend-item"><span class="legend-dot" style="background:#f59e0b;"></span> Evapotranspiration ET₀ (mm)</span>
+        </div>
+      </div>
+
+      <!-- Live Sensor Readouts Grid -->
+      <div class="sensors-stat-grid">
+        <div class="sensor-stat-card">
+          <div class="stat-label">Ambient Temp</div>
+          <div class="stat-num" id="stat-temp">31.2 °C</div>
+          <div class="stat-sub">Microclimate</div>
+        </div>
+        <div class="sensor-stat-card">
+          <div class="stat-label">Relative Humidity</div>
+          <div class="stat-num" id="stat-humidity">58 %</div>
+          <div class="stat-sub">Air Saturation</div>
+        </div>
+        <div class="sensor-stat-card">
+          <div class="stat-label">Soil Temp (Root)</div>
+          <div class="stat-num" id="stat-soil-temp">26.8 °C</div>
+          <div class="stat-sub">Probe DS18B20</div>
+        </div>
+        <div class="sensor-stat-card">
+          <div class="stat-label">Solar Radiation</div>
+          <div class="stat-num" id="stat-solar">670 W/m²</div>
+          <div class="stat-sub">Pyranometer</div>
+        </div>
+        <div class="sensor-stat-card">
+          <div class="stat-label">24h Rainfall</div>
+          <div class="stat-num" id="stat-rain">0.0 mm</div>
+          <div class="stat-sub">Tipping Bucket</div>
+        </div>
+        <div class="sensor-stat-card">
+          <div class="stat-label">Wind Speed</div>
+          <div class="stat-num" id="stat-wind">9.5 km/h</div>
+          <div class="stat-sub">Anemometer</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== TAB 6: EDGE HARDWARE & BOM ==================== -->
+    <div class="tab-content" id="tab-hardware">
+      <div class="grid-2col">
+        <!-- BOM Table -->
+        <div class="card">
+          <div class="card-header">
+            <h3>🛠️ Field Deployment Bill of Materials (BOM)</h3>
+            <span class="badge-success">Total &lt; ₹4,500 (~$55)</span>
+          </div>
+          <p class="bom-intro">
+            Engineered specifically for Indian smallholder farmers and agricultural cooperatives.
+            All components are locally available in Indian electronics markets.
+          </p>
+
+          <table class="bom-table">
+            <thead>
+              <tr>
+                <th>Component</th>
+                <th>Role in Architecture</th>
+                <th>Cost (₹)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>ESP32-S3 AI SoC / Pi Zero 2W</strong></td>
+                <td>On-device quantized AI inference, flash logging, LoRa master</td>
+                <td>₹1,150</td>
+              </tr>
+              <tr>
+                <td><strong>OV2640 / OV5640 Camera</strong></td>
+                <td>Macro crop leaf &amp; pest vision capture</td>
+                <td>₹450</td>
+              </tr>
+              <tr>
+                <td><strong>Dual Soil Moisture Sensors</strong></td>
+                <td>Capacitive corrosion-proof probes (15cm &amp; 30cm)</td>
+                <td>₹380</td>
+              </tr>
+              <tr>
+                <td><strong>SHT31 + DS18B20 Temp/Humidity</strong></td>
+                <td>Industrial precision weather &amp; root temperature</td>
+                <td>₹420</td>
+              </tr>
+              <tr>
+                <td><strong>SX1262 LoRa 868MHz Radio</strong></td>
+                <td>12 km license-free farm communication without SIM</td>
+                <td>₹550</td>
+              </tr>
+              <tr>
+                <td><strong>15W Solar PV + LiFePO4 Battery</strong></td>
+                <td>100% self-powered, 5-day cloudy backup autonomy</td>
+                <td>₹1,300</td>
+              </tr>
+              <tr class="bom-total-row">
+                <td colspan="2"><strong>TOTAL SYSTEM DEPLOYMENT COST</strong></td>
+                <td><strong>₹4,250</strong></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Edge Architecture Blueprint & Store-Forward Queue -->
+        <div class="card">
+          <div class="card-header">
+            <h3>📡 Edge Gateway &amp; Zero-Cloud Topology</h3>
+            <span class="badge-info">Offline-First</span>
+          </div>
+
+          <div class="architecture-diagram">
+            <div class="arch-box">
+              <span class="arch-icon">🌿</span>
+              <strong>Crop &amp; Soil Probes</strong>
+              <small>Capacitive + Camera</small>
+            </div>
+            <div class="arch-arrow">➔</div>
+            <div class="arch-box highlight">
+              <span class="arch-icon">🧠</span>
+              <strong>AgriEdge AI Box</strong>
+              <small>INT8 NPU Inference</small>
+            </div>
+            <div class="arch-arrow">➔</div>
+            <div class="arch-box">
+              <span class="arch-icon">📻</span>
+              <strong>LoRa Mesh / Audio</strong>
+              <small>Farmer Voice / Display</small>
+            </div>
+          </div>
+
+          <div class="sync-queue-box">
+            <h4>Offline Store-and-Forward Sync Queue</h4>
+            <p>
+              When disconnected from cellular networks, all diagnostic frames and sensor logs are written to an encrypted local SQLite/Flash database.
+              When an edge node comes within range of a mobile hotspot or LoRa hub, it automatically syncs in bulk.
+            </p>
+            <div class="sync-status-row">
+              <span>Locally Cached Packets: <strong id="sync-cached-count">142</strong></span>
+              <button class="btn-secondary" onclick="triggerManualSync()">🔄 Simulate Cloud Re-Sync</button>
+            </div>
+            <div id="sync-result-msg" class="sync-result-msg"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div><strong>AgriEdge AI</strong> • Hackathon Prototype for Sustainable &amp; Climate-Resilient Agriculture</div>
+    <div>Empowering farmers through on-device edge AI, smart water conservation, and early disaster warning.</div>
+  </footer>
+
+  <script src="/static/app.js?v=2"></script>
+</body>
+</html>
